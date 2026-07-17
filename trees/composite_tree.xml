@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="3" main_tree_to_execute="CompositeTree">
+
+    <!-- Pull in the reusable subtree definition from another file. -->
+    <include path="nav_subtree.xml"/>
+
+    <!--
+        Composite tree: call <SubTree ID="NavigateToPose"> twice.
+        - First call uses a literal Pose value: target="10.0;5.0"
+        - Second call uses a blackboard pointer: target="{target_pose}"
+          which means "read target_pose from the blackboard". We set
+          that key via UpdateTarget right before the second call.
+    -->
+    <BehaviorTree ID="CompositeTree">
+        <Sequence name="root">
+
+            <PrintMessage msg="== CompositeTree: leg 1 with static target (10, 5) =="/>
+            <SubTree ID="NavigateToPose" target="10.0;5.0" __shared_blackboard="true"/>
+
+            <PrintMessage msg="== CompositeTree: retarget then leg 2 via blackboard =="/>
+            <UpdateTarget pose="20.0;0.0"/>
+            <SubTree ID="NavigateToPose" target="{target_pose}" __shared_blackboard="true"/>
+
+            <PrintMessage msg="== CompositeTree done =="/>
+
+        </Sequence>
+    </BehaviorTree>
+
+</root>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="3">
+
+    <BehaviorTree ID="ChaseTree">
+        <Sequence name="root_sequence">
+
+            <PrintMessage msg="== ChaseTree: retargeting to (20, 0) =="/>
+
+            <!-- Pose is a custom BT type. Format "x;y". -->
+            <UpdateTarget pose="20.0;0.0"/>
+
+            <NavToPose name="go_to_second_target"
+                       step_size="1.0"
+                       arrival_tolerance="0.3"
+                       max_steps="100"/>
+
+            <IsGoalReached arrival_tolerance="0.3"/>
+
+            <PrintMessage msg="== ChaseTree done =="/>
+
+        </Sequence>
+    </BehaviorTree>
+
+</root>

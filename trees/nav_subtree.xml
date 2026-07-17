@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="3">
+
+    <!--
+        Reusable subtree: walk toward a goal then verify arrival.
+        The goal is supplied via the `target` port (Pose), which the
+        caller passes when invoking <SubTree ID="NavigateToPose" .../>.
+        All exposed ports are forwarded into NavToPose and IsGoalReached
+        inside this subtree (BT.CPP walks the tree to find them).
+    -->
+    <BehaviorTree ID="NavigateToPose">
+        <Sequence name="nav_to_pose">
+
+            <NavToPose name="move"
+                       step_size="1.0"
+                       arrival_tolerance="0.3"
+                       max_steps="50"/>
+
+            <IsGoalReached name="verify" arrival_tolerance="0.3"/>
+
+        </Sequence>
+    </BehaviorTree>
+
+</root>

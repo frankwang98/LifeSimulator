@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="3">
+
+    <BehaviorTree ID="NavTree">
+        <Sequence name="root_sequence">
+
+            <PrintMessage msg="== NavTree: heading to (10, 5) =="/>
+
+            <NavToPose name="go_to_first_target"
+                       step_size="1.0"
+                       arrival_tolerance="0.3"
+                       max_steps="50"/>
+
+            <IsGoalReached arrival_tolerance="0.3"/>
+
+            <PrintMessage msg="== NavTree done =="/>
+
+        </Sequence>
+    </BehaviorTree>
+
+</root>
