@@ -29,6 +29,9 @@ set(BT_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
 set(BT_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
 set(BT_BUILD_PYTHON   OFF CACHE BOOL "" FORCE)
 set(BT_BUILD_ZMQ      OFF CACHE BOOL "" FORCE)
+# BT.CPP's own tests/CMakeLists uses ${CMAKE_SOURCE_DIR}/tests/trees which
+# resolves to OUR project root and fails to copy. We don't need its tests.
+set(BUILD_UNIT_TESTS  OFF CACHE BOOL "" FORCE)
 
 CPMAddPackage(
   NAME BehaviorTree.CPP
