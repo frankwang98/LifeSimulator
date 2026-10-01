@@ -69,3 +69,6 @@ Testing/
 .cache/
 
 /output/
+
+/docs/engine.js
+/docs/engine.wasm

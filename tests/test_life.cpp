@@ -54,6 +54,54 @@ int main() {
       rejected = true;
     }
     check(rejected, "invalid duration");
+    check(life::weekday(life::parseDate("2026-10-01")) == 4, "calendar starts on Thursday");
+    check(life::dateString(life::nextDate(life::parseDate("2028-02-28"))) == "2028-02-29",
+          "leap day");
+    check(life::dateString(life::nextDate(life::parseDate("2026-12-31"))) == "2027-01-01",
+          "new year");
+    auto config = life::parseConfig("days=30\ntrace_day=1\nvacation_days=7");
+    auto month = life::simulate(config);
+    check(life::dateString(month.front().date) == "2026-10-01", "actual start date");
+    for (int day = 0; day < 7; ++day) {
+      check(!month[day].workday && month[day].counts[5] == 0, "vacation suppresses work");
+    }
+    check(month[7].workday, "October 8 is a weekday after vacation");
+    check(!month[9].workday, "Saturday is not a workday");
+    check(month[0].hours.size() == 24, "24 actual tick traces");
+    for (const auto& hour : month[0].hours) {
+      int executed = 0;
+      for (const auto& event : hour.events) {
+        if (event.kind == "action")
+          ++executed;
+      }
+      check(executed == 1, "selector executes exactly one action");
+      check(hour.events.back().node == "root" && hour.events.back().status == life::Status::Success,
+            "root completes after selected branch");
+      check(hour.after.action != "work", "trace matches holiday decision");
+    }
+    check(month[1].hours.empty(), "only selected day retains traces");
+    config.trace_day = 8;
+    auto later = life::simulate(config);
+    check(later[7].hours.size() == 24 && later.back().state.cash == month.back().state.cash,
+          "recording another day does not change model outcome");
+    config.hourly_income = 100;
+    auto higher_income = life::simulate(config);
+    check(higher_income.back().state.debt < month.back().state.debt,
+          "parameters change the future");
+    config.work_hours = 0;
+    auto no_work = life::simulate(config);
+    for (const auto& day : no_work)
+      check(day.counts[5] == 0, "zero working hours");
+    for (const std::string invalid :
+         {"health=nan", "days=1.5", "debt=-1", "start_date=2026-02-30", "unknown=1"}) {
+      bool invalid_rejected = false;
+      try {
+        life::parseConfig(invalid);
+      } catch (const std::exception&) {
+        invalid_rejected = true;
+      }
+      check(invalid_rejected, "configuration rejects invalid values");
+    }
     std::cout << "All simulation tests passed\n";
   } catch (const std::exception& e) {
     std::cerr << e.what() << "\n";

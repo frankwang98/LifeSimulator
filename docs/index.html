@@ -1,16 +1,43 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LifeSimulator · 人生的不同走法</title><link rel="stylesheet" href="style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LifeSimulator · 我的平行世界</title><link rel="stylesheet" href="style.css"></head>
 <body>
-<header><a class="brand" href="./">◒ LifeSimulator</a><a href="https://github.com/frankwang98/LifeSimulator">GitHub ↗</a></header>
+<header><a class="brand" href="./">◒ LifeSimulator</a><a href="https://github.com/frankwang98/LifeSimulator">代码与模型 ↗</a></header>
 <main>
-<section class="intro"><span class="eyebrow">人生行为树实验室</span><h1>时间怎么花，<br>生活就怎么生长。</h1><p>同一个起点，三种生活策略。看看工作、健康与学习的选择，如何在三年里慢慢累积。</p></section>
-<section class="controls" aria-label="模拟控制"><div class="strategies" role="group" aria-label="选择策略"><button data-mode="money">赚钱优先</button><button data-mode="health">健康优先</button><button class="active" data-mode="balanced">均衡生活</button></div><div class="playback"><button id="play">▶ 播放</button><label for="day">第 <strong id="day-label">365</strong> 天</label><input id="day" type="range" min="1" max="1095" value="365"><select id="duration" aria-label="查看时长"><option value="365">一年</option><option value="1095">三年</option></select></div></section>
-<p id="description" class="description"></p>
-<section id="stats" class="stats" aria-label="当前状态"></section>
-<section class="panels"><article class="panel"><div class="panel-title"><h2>状态如何变化</h2><select id="metric" aria-label="趋势指标"><option value="health">健康</option><option value="debt">剩余负债</option><option value="knowledge">知识</option><option value="happiness">幸福</option><option value="relationship">关系</option><option value="cash">现金</option></select></div><div id="legend" class="legend"><span class="money">● 赚钱优先</span><span class="health">● 健康优先</span><span class="balanced">● 均衡生活</span></div><svg id="chart" viewBox="0 0 720 280" role="img" aria-label="三种策略的状态趋势"></svg><p class="hint">曲线来自 C++ 模拟；竖线标记当前查看的日期。</p></article><article class="panel"><h2>这一天，时间花在哪里？</h2><div id="activities"></div><p class="hint">每天共 24 小时。行为树先保障睡眠与休养，再处理活动间隔和工作安排。</p></article></section>
-<section class="panel comparison"><h2>同一时刻，三种选择</h2><div class="table-wrap"><table><thead><tr><th>策略</th><th>健康</th><th>剩余负债</th><th>知识</th><th>幸福</th></tr></thead><tbody id="comparison"></tbody></table></div></section>
-<details class="panel"><summary>模拟的起点和规则</summary><p>28 岁，现金 0 元，负债 30 万元。生活支出每天 120 元，债务年利率 4%，每 30 天将超过 3000 元现金储备的部分用于还贷。</p><p>三种策略每日工作上限分别为 10、6、8 小时，周末不工作。工作带来收入，也消耗精力和健康；学习积累知识，运动和陪伴改善状态。</p><p>这是确定性规则实验，评分与收益是演示假设，不是人生预测。第一版暂不包含失业、疾病等突发事件，也不能修改初始参数。</p></details>
-<footer>由 C++ 行为树生成 · 不同选择，没有统一答案。</footer>
-</main><script src="data.js"></script><script src="app.js"></script>
-</body></html>
+<section class="intro"><span class="eyebrow">我的平行世界 · 2026.10.01</span><h1>如果从今天起，<br>换一种生活。</h1><p>平行世界里的我，也在放假休息。从同一个起点出发，改变一些条件，看看一个月、一年之后会有什么不同。</p><p id="engine-status" role="status" class="engine-status">正在加载 C++ 模拟引擎…</p></section>
+<section class="panel"><div class="panel-title"><h2>定义这个世界</h2><button id="reset" type="button">恢复初始设定</button></div><p class="hint">初始世界曲线使用原始设定；修改以下假设，再点击“生成平行世界”。参数只是演示设定，请按实际情况填写。</p>
+<form id="world-form">
+<div class="fields">
+<label>起点日期<input name="start_date" type="date" value="2026-10-01" min="1900-01-01" max="2200-12-31" required></label>
+<label>现在的健康 / 100<input name="health" type="number" min="0" max="100" value="70" required></label>
+<label>现在的现金 / 元<input name="cash" type="number" min="-100000000" max="100000000" value="0" required></label>
+<label>现在的负债 / 元<input name="debt" type="number" min="0" max="100000000" value="300000" required></label>
+<label>基础时薪 / 元<input name="hourly_income" type="number" min="0" max="10000" step="0.1" value="50" required></label>
+<label>每日生活支出 / 元<input name="daily_expense" type="number" min="0" max="100000" step="0.1" value="120" required></label>
+<label>每日基础工作上限 / 小时<input name="work_hours" type="number" min="0" max="12" value="8" required></label>
+<label>从起点连续休假 / 天<input name="vacation_days" type="number" min="0" max="365" value="7" required></label>
+<label>运动间隔 / 小时<input name="exercise_interval" type="number" min="1" max="168" value="24" required></label>
+<label>学习间隔 / 小时<input name="study_interval" type="number" min="1" max="168" value="24" required></label>
+<label>生活策略<select name="strategy"><option value="balanced">均衡生活</option><option value="money">赚钱优先</option><option value="health">健康优先</option></select></label>
+<label>向未来推演<select name="days"><option value="30">30 天</option><option value="365" selected>一年 · 365 天</option><option value="1095">三年 · 1095 天</option></select></label>
+</div>
+<details class="advanced"><summary>更多个人状态与模型参数</summary><div class="fields">
+<label>年龄<input name="age" type="number" min="0" max="100" value="28" step="0.1" required></label>
+<label>精力 / 100<input name="energy" type="number" min="0" max="100" value="80" required></label>
+<label>知识评分<input name="knowledge" type="number" min="0" max="10000" value="20" required></label>
+<label>幸福 / 100<input name="happiness" type="number" min="0" max="100" value="60" required></label>
+<label>关系 / 100<input name="relationship" type="number" min="0" max="100" value="60" required></label>
+<label>陪伴间隔 / 小时<input name="family_interval" type="number" min="1" max="168" value="24" required></label>
+<label>每小时学习的知识增量<input name="knowledge_gain" type="number" min="0" max="10" step="0.01" value="0.12" required></label>
+<label>债务年利率（0.04 = 4%）<input name="annual_interest" type="number" min="0" max="1" step="0.001" value="0.04" required></label>
+<label>还贷时保留现金 / 元<input name="cash_reserve" type="number" min="0" max="100000000" value="3000" required></label>
+</div></details>
+<div class="form-actions"><button id="run" class="active" type="submit" disabled>生成平行世界</button><button id="export" type="button">导出设定</button><label class="import-button">导入设定<input id="import" type="file" accept="application/json,.json"></label><span id="dirty" class="hint"></span></div>
+</form></section>
+<section class="controls timeline"><div class="playback"><label for="day">查看第 <strong id="day-label">1</strong> 天</label><input id="day" type="range" min="1" max="365" value="1" disabled><span id="date-label"></span></div><p class="hint">日期对应当天；状态卡片显示日末结果。下方行为树可逐小时回放当天真实执行。</p></section>
+<section id="stats" class="stats" aria-label="平行世界当前状态"></section>
+<section class="panel"><div class="panel-title"><h2>原来的世界，与新的可能</h2><select id="metric" aria-label="趋势指标"><option value="health">健康</option><option value="debt">负债</option><option value="cash">现金</option><option value="knowledge">知识</option><option value="happiness">幸福</option><option value="relationship">关系</option></select></div><div class="legend"><span class="health">● 初始世界</span><span class="balanced">● 平行世界</span></div><svg id="chart" viewBox="0 0 720 280" role="img" aria-label="两个世界的趋势对比"></svg><p id="future-summary" class="hint"></p></section>
+<section class="panels trace-panels"><article class="panel"><h2>今天，平行世界里的我在做什么？</h2><div id="activities"></div><div class="playback"><button id="play" disabled>▶ 回放一天</button><label for="hour">时刻 <strong id="hour-label">12:00</strong></label><input id="hour" type="range" min="0" max="23" value="12" disabled></div><p id="action-label"></p><div id="deltas" class="hint"></div><p class="hint">这里显示该小时行动前后的变化；生活支出、利息、还贷与自然衰减在日末单独结算。</p></article><article class="panel"><h2>行为树正在怎样选择？</h2><div class="trace-root" id="root-status">Selector · 按优先级选择第一个成功分支</div><div id="tree"></div><details><summary>本小时 C++ 执行事件</summary><ol id="events" class="events"></ol></details><p class="hint">绿色：通过或执行；红色：条件未通过；灰色：未访问。下方分支在前面的分支成功后不会执行。</p></article></section>
+<details class="panel"><summary>这是什么样的“平行世界”？</summary><p>它是关于我的可解释生活模型。现在是 2026 年 10 月 1 日，默认前 7 天休假，之后按真实日期中的周一至周五工作。连续休假是可编辑假设，不是官方节假日表。</p><p>网页没有重写模拟规则：参数送入 C++ 编译出的 WebAssembly，日末状态、每小时行为、节点执行记录均由 C++ 返回。所有计算与设定保存在你的浏览器中。</p><p>当前是一个人的确定性模型，不包含真实疾病、失业、死亡或家庭成员。收入按小时产生，休假没有工作收入；知识提高时薪只是模型假设。最低活动保障仍可能覆盖设定间隔，赚钱策略只保留最低活动保障。它帮助比较假设，不承诺未来会发生什么。</p></details>
+<footer>同一个今天，可以有不同的明天。</footer>
+</main><script src="app.js"></script></body></html>

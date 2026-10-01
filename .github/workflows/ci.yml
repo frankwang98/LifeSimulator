@@ -11,3 +11,4 @@ jobs:
       - run: cmake --build build -j2
       - run: ctest --test-dir build --output-on-failure
       - run: ./build/life_tree --strategy all --days 365 --output output
+      - run: ./build/life_tree --config examples/worlds/my-world.conf --json > output/world.json
