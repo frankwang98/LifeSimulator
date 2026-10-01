@@ -34,13 +34,11 @@ inline nav_tree::Pose convertFromString<nav_tree::Pose>(StringView str) {
   // Format: "x;y", e.g. "10.0;5.0"
   const auto sep = str.find(';');
   if (sep == StringView::npos) {
-    throw BT::RuntimeError(
-        std::string("Pose string must be 'x;y' format, got: '") +
-        std::string(str) + "'");
+    throw BT::RuntimeError(std::string("Pose string must be 'x;y' format, got: '") +
+                           std::string(str) + "'");
   }
   const StringView x_part = str.substr(0, sep);
   const StringView y_part = str.substr(sep + 1);
-  return nav_tree::Pose{convertFromString<double>(x_part),
-                        convertFromString<double>(y_part)};
+  return nav_tree::Pose{convertFromString<double>(x_part), convertFromString<double>(y_part)};
 }
 }  // namespace BT

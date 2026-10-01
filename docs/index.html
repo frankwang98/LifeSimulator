@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LifeSimulator · 人生的不同走法</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><a class="brand" href="./">◒ LifeSimulator</a><a href="https://github.com/frankwang98/LifeSimulator">GitHub ↗</a></header>
+<main>
+<section class="intro"><span class="eyebrow">人生行为树实验室</span><h1>时间怎么花，<br>生活就怎么生长。</h1><p>同一个起点，三种生活策略。看看工作、健康与学习的选择，如何在三年里慢慢累积。</p></section>
+<section class="controls" aria-label="模拟控制"><div class="strategies" role="group" aria-label="选择策略"><button data-mode="money">赚钱优先</button><button data-mode="health">健康优先</button><button class="active" data-mode="balanced">均衡生活</button></div><div class="playback"><button id="play">▶ 播放</button><label for="day">第 <strong id="day-label">365</strong> 天</label><input id="day" type="range" min="1" max="1095" value="365"><select id="duration" aria-label="查看时长"><option value="365">一年</option><option value="1095">三年</option></select></div></section>
+<p id="description" class="description"></p>
+<section id="stats" class="stats" aria-label="当前状态"></section>
+<section class="panels"><article class="panel"><div class="panel-title"><h2>状态如何变化</h2><select id="metric" aria-label="趋势指标"><option value="health">健康</option><option value="debt">剩余负债</option><option value="knowledge">知识</option><option value="happiness">幸福</option><option value="relationship">关系</option><option value="cash">现金</option></select></div><div id="legend" class="legend"><span class="money">● 赚钱优先</span><span class="health">● 健康优先</span><span class="balanced">● 均衡生活</span></div><svg id="chart" viewBox="0 0 720 280" role="img" aria-label="三种策略的状态趋势"></svg><p class="hint">曲线来自 C++ 模拟；竖线标记当前查看的日期。</p></article><article class="panel"><h2>这一天，时间花在哪里？</h2><div id="activities"></div><p class="hint">每天共 24 小时。行为树先保障睡眠与休养，再处理活动间隔和工作安排。</p></article></section>
+<section class="panel comparison"><h2>同一时刻，三种选择</h2><div class="table-wrap"><table><thead><tr><th>策略</th><th>健康</th><th>剩余负债</th><th>知识</th><th>幸福</th></tr></thead><tbody id="comparison"></tbody></table></div></section>
+<details class="panel"><summary>模拟的起点和规则</summary><p>28 岁，现金 0 元，负债 30 万元。生活支出每天 120 元，债务年利率 4%，每 30 天将超过 3000 元现金储备的部分用于还贷。</p><p>三种策略每日工作上限分别为 10、6、8 小时，周末不工作。工作带来收入，也消耗精力和健康；学习积累知识，运动和陪伴改善状态。</p><p>这是确定性规则实验，评分与收益是演示假设，不是人生预测。第一版暂不包含失业、疾病等突发事件，也不能修改初始参数。</p></details>
+<footer>由 C++ 行为树生成 · 不同选择，没有统一答案。</footer>
+</main><script src="data.js"></script><script src="app.js"></script>
+</body></html>

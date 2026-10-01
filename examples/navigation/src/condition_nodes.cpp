@@ -9,8 +9,7 @@ namespace nav_tree {
 
 // ---------- IsGoalReached ----------
 
-IsGoalReached::IsGoalReached(const std::string& name,
-                             const BT::NodeConfiguration& config)
+IsGoalReached::IsGoalReached(const std::string& name, const BT::NodeConfiguration& config)
     : BT::ConditionNode(name, config) {}
 
 BT::PortsList IsGoalReached::providedPorts() {
@@ -36,18 +35,16 @@ BT::NodeStatus IsGoalReached::tick() {
   const double dist = std::hypot(target.x - current.x, target.y - current.y);
   const bool reached = dist <= tol;
 
-  std::cout << "[IsGoalReached] current=(" << current.x << ", " << current.y
-            << ") target=(" << target.x << ", " << target.y
-            << ") dist=" << dist << " tol=" << tol
-            << " -> " << (reached ? "SUCCESS" : "FAILURE") << "\n";
+  std::cout << "[IsGoalReached] current=(" << current.x << ", " << current.y << ") target=("
+            << target.x << ", " << target.y << ") dist=" << dist << " tol=" << tol << " -> "
+            << (reached ? "SUCCESS" : "FAILURE") << "\n";
 
   return reached ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
 }
 
 // ---------- UpdateTarget ----------
 
-UpdateTarget::UpdateTarget(const std::string& name,
-                           const BT::NodeConfiguration& config)
+UpdateTarget::UpdateTarget(const std::string& name, const BT::NodeConfiguration& config)
     : BT::SyncActionNode(name, config) {}
 
 BT::PortsList UpdateTarget::providedPorts() {
@@ -60,8 +57,7 @@ BT::NodeStatus UpdateTarget::tick() {
     throw BT::RuntimeError("UpdateTarget: 'pose' port must be set");
   }
   config().blackboard->set("target_pose", pose.value());
-  std::cout << "[UpdateTarget] target_pose set to (" << pose->x << ", "
-            << pose->y << ")\n";
+  std::cout << "[UpdateTarget] target_pose set to (" << pose->x << ", " << pose->y << ")\n";
   return BT::NodeStatus::SUCCESS;
 }
 

@@ -1,8 +1,30 @@
-# Life Tree · 人生行为树模拟器
+# LifeSimulator · 人生行为树模拟器
 
 用 C++17 行为树模拟一个人如何分配时间，在工作、健康、学习和家庭之间做选择，并观察长期结果。
 
-`nav_tree` 仓库现在以人生模拟为主；原来的 BehaviorTree.CPP 导航示例保留在 [`examples/navigation`](examples/navigation)，独立构建。自动驾驶方向由 ros2drive 承载。
+`LifeSimulator`（原 `nav_tree`）仓库现在以人生模拟为主；原来的 BehaviorTree.CPP 导航示例保留在 [`examples/navigation`](examples/navigation)，独立构建。自动驾驶方向由 ros2drive 承载。
+
+## 网页演示
+
+[打开 GitHub Pages](https://frankwang98.github.io/LifeSimulator/)：切换三种策略、拖动日期、播放时间推进，查看健康、负债、知识等曲线，以及每天的时间分配。
+
+网页数据由同一套 C++ 模拟器生成，包含三年逐日记录，不重复实现模拟逻辑。网页暂不支持修改初始参数。每次提交会重新生成数据并发布。GitHub Settings → Pages 的 Source 应选择 **GitHub Actions**。
+
+本地预览：
+
+```bash
+python3 scripts/build_pages.py ./build/life_tree
+python3 -m http.server 8000 --directory docs
+# 打开 http://localhost:8000
+```
+
+## 代码格式
+
+统一使用 `.clang-format`（Google 基础样式，2 空格，100 列），CI 使用 clang-format-18 校验。修改 C++ 后执行：
+
+```bash
+clang-format-18 -i src/*.h src/*.cpp tests/*.cpp examples/navigation/src/*.h examples/navigation/src/*.cpp
+```
 
 ## 快速开始
 

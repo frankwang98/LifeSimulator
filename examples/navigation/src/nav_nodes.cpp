@@ -49,13 +49,13 @@ BT::NodeStatus NavToPose::onRunning() {
   const double dist = std::hypot(dx, dy);
 
   if (dist <= tol) {
-    std::cout << "[NavToPose] arrived at (" << current.x << ", " << current.y
-              << ") after " << steps_taken_ << " steps\n";
+    std::cout << "[NavToPose] arrived at (" << current.x << ", " << current.y << ") after "
+              << steps_taken_ << " steps\n";
     return BT::NodeStatus::SUCCESS;
   }
   if (steps_taken_ >= cap) {
-    std::cout << "[NavToPose] FAILURE: exceeded max_steps=" << cap
-              << " (remaining dist=" << dist << ")\n";
+    std::cout << "[NavToPose] FAILURE: exceeded max_steps=" << cap << " (remaining dist=" << dist
+              << ")\n";
     return BT::NodeStatus::FAILURE;
   }
 
@@ -65,9 +65,8 @@ BT::NodeStatus NavToPose::onRunning() {
   current.y += dy * ratio;
   bb->set("current_pose", current);
 
-  std::cout << "[NavToPose] step=" << steps_taken_
-            << " pos=(" << current.x << ", " << current.y << ")"
-            << " remaining=" << (dist - step) << "\n";
+  std::cout << "[NavToPose] step=" << steps_taken_ << " pos=(" << current.x << ", " << current.y
+            << ")" << " remaining=" << (dist - step) << "\n";
 
   return BT::NodeStatus::RUNNING;
 }

@@ -57,8 +57,8 @@ int main(int argc, char** argv) {
     std::cout << "=== Status: " << BT::toStr(status) << " ===\n";
     const Pose current = blackboard->get<Pose>("current_pose");
     const Pose target = blackboard->get<Pose>("target_pose");
-    std::cout << "=== After tick: current=(" << current.x << ", " << current.y
-              << ") target=(" << target.x << ", " << target.y << ") ===\n";
+    std::cout << "=== After tick: current=(" << current.x << ", " << current.y << ") target=("
+              << target.x << ", " << target.y << ") ===\n";
 
     if (status != BT::NodeStatus::SUCCESS) {
       exit_code = 1;
