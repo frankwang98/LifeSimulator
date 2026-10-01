@@ -1,183 +1,90 @@
-# nav_tree
+# Life Tree · 人生行为树模拟器
 
-A standalone BehaviorTree.CPP demo project. **No Baize, no ROS, no other project
-coupling** — just CMake + CPM + BT.CPP v3.8.8 in one folder.
+用 C++17 行为树模拟一个人如何分配时间，在工作、健康、学习和家庭之间做选择，并观察长期结果。
 
-Demonstrates four core BT.CPP concepts:
+`nav_tree` 仓库现在以人生模拟为主；原来的 BehaviorTree.CPP 导航示例保留在 [`examples/navigation`](examples/navigation)，独立构建。自动驾驶方向由 ros2drive 承载。
 
-1. **Custom nodes** (`NavToPose`, `PrintMessage`)
-2. **Custom types** (`Pose` struct — used as a port type)
-3. **Condition nodes** (`IsGoalReached` — gates control flow)
-4. **Multi-tree composition** with shared blackboard
+## 快速开始
 
-## Layout
-
-```
-nav_tree/
-├── CMakeLists.txt
-├── README.md
-├── src/
-│   ├── main.cpp            # Factory + multi-tree tick loop
-│   ├── pose.h              # Pose struct + BT::convertFromString<Pose>
-│   ├── nav_nodes.h         # NavToPose, PrintMessage
-│   ├── nav_nodes.cpp
-│   ├── condition_nodes.h   # IsGoalReached, UpdateTarget
-│   └── condition_nodes.cpp
-└── trees/
-    ├── nav_tree.xml        # Multi-tree 1: walk to (10, 5)
-    ├── chase_tree.xml      # Multi-tree 2: retarget to (20, 0) and walk there
-    ├── nav_subtree.xml     # Reusable BehaviorTree (SubTree primitive)
-    └── composite_tree.xml  # Composes the subtree twice with port remapping
-```
-
-## Build
-
-Requires CMake ≥ 3.16 and a C++17 compiler (gcc 7+, clang 5+, MSVC 2019+).
+主程序无第三方依赖、无需联网下载。需要 CMake 3.16+、C++17 编译器。
 
 ```bash
-cmake -B build -S .
-cmake --build build -j
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j2
+./build/life_tree --strategy all --days 365 --output output
+ctest --test-dir build --output-on-failure
 ```
 
-The first configure downloads CPM.cmake and BehaviorTree.CPP v3.8.8 from
-GitHub (~30s on cold cache).
-
-## Run
+没有 CMake 也可以：
 
 ```bash
-# Default: tick nav_tree.xml only
-./build/nav_tree
-
-# Multi-tree: tick trees in order, sharing the same blackboard
-./build/nav_tree nav_tree.xml chase_tree.xml
-
-# SubTree composition: composite_tree.xml <include>s nav_subtree.xml
-# and invokes the subtree twice with different port bindings.
-./build/nav_tree composite_tree.xml
+g++ -std=c++17 -O2 src/main.cpp -o life_tree
+./life_tree --strategy balanced --days 365
 ```
 
-Expected output (multi-tree run):
+程序打印各策略的最终状态，生成 `money.csv`、`health.csv`、`balanced.csv`。CSV 每行是一天，包含状态、收入、生活支出、还贷额和七种行为的小时数。可以用 Excel、Python 或其他绘图工具查看趋势。
 
-```
-=== Loading .../nav_tree.xml ===
-=== Ticking .../nav_tree.xml ===
-[PrintMessage] == NavTree: heading to (10, 5) ==
-[NavToPose] step=1 pos=(0.894, 0.447) remaining=10.180
-...
-[NavToPose] arrived at (9.839, 4.919) after 12 steps
-[IsGoalReached] current=(9.839, 4.919) target=(10, 5) dist=0.180 tol=0.3 -> SUCCESS
-=== Status: SUCCESS ===
+| 参数 | 默认 | 含义 |
+|---|---|---|
+| `--strategy` | `balanced` | `money` / `health` / `balanced` / `all` |
+| `--days` | `365` | 1 至 36500 天 |
+| `--output` | `output` | CSV 保存目录 |
+| `--help` | — | 查看用法 |
 
-=== Loading .../chase_tree.xml ===
-=== Ticking .../chase_tree.xml ===
-[PrintMessage] == ChaseTree: retargeting to (20, 0) ==
-[UpdateTarget] target_pose set to (20, 0)
-[NavToPose] step=1 pos=(10.739, 4.484) remaining=10.290
-...
-[NavToPose] arrived at (19.739, 0.126) after 12 steps
-[IsGoalReached] ... -> SUCCESS
-=== Status: SUCCESS ===
-```
+## 模拟规则
 
-Note the second tree starts from where the first left off
-(`current_pose = (9.839, 4.919)`) — that's blackboard sharing across trees.
+一个 tick 是一小时；行为即时执行，每天恰好 24 个 tick。三种策略从同一个初始状态开始，模型是确定性的，重复运行得到相同结果。
 
-## Custom nodes
+Blackboard 由 `life::State` 承载：年龄、健康、精力、现金、债务、知识、幸福、关系以及活动时间记录。初始年龄 28 岁，现金 0，债务 300000；这是演示参数，可以在 `src/life.h` 中调整。
 
-| Node            | Type                | Purpose                                          |
-|-----------------|---------------------|--------------------------------------------------|
-| `PrintMessage`  | SyncActionNode      | Print a string to stdout                         |
-| `NavToPose`     | StatefulActionNode  | Step toward `target_pose` on the blackboard      |
-| `IsGoalReached` | ConditionNode       | SUCCESS if within tolerance, FAILURE otherwise    |
-| `UpdateTarget`  | SyncActionNode      | Overwrite `target_pose` on the blackboard        |
+行为树使用 `Selector` 选择第一个可执行分支，分支通过 `Sequence(Condition, Action)` 表示。当前行为均为一小时原子行为，因此只需 SUCCESS / FAILURE；尚未实现跨 tick 的 RUNNING、halt 或异步行为。主程序采用自己的轻量行为树内核，原版 BehaviorTree.CPP 示例仍在保留目录中。
 
-### Custom type: `Pose`
+| 决策顺序 | 条件与行为 |
+|---|---|
+| 1 | 23:00—07:00 或精力低于 20：睡觉 |
+| 2 | 健康低于 35：休养，有额外护理支出 |
+| 3 | 48 小时未运动：运动 |
+| 4 | 48 小时未陪伴：陪伴家人 |
+| 5 | 72 小时未学习：学习 |
+| 6 | 健康、均衡策略：每日运动 |
+| 7 | 工作日 09:00—21:00：按策略工作时数上限工作 |
+| 8 | 健康、均衡策略：每日陪伴、学习 |
+| 9 | 其他时间：休闲 |
 
-```cpp
-struct Pose { double x{0.0}; double y{0.0}; };
-```
+活动间隔约束先于工作检查，防止低优先级活动长期饥饿；睡眠和紧急休养仍可以覆盖这些约束。
 
-XML syntax: `pose="x;y"`, e.g. `pose="20.0;0.0"`. The parser lives in
-`src/pose.h` as a `BT::convertFromString<Pose>` specialization (defined
-inline in the header so every TU that needs it can instantiate it).
+| 策略 | 每日工作上限 | 取舍 |
+|---|---|---|
+| money | 10 小时 | 较快还贷，运动和学习以最低间隔为主 |
+| health | 6 小时 | 每日运动，留出更多恢复时间 |
+| balanced | 8 小时 | 每日运动、学习和陪伴 |
 
-### Blackboard keys
+工作收入随知识增加；工作消耗精力和健康，学习增加知识。每天扣生活支出 120 元，债务按年利率 4% 日计息，每 30 天用超过 3000 元现金储备的部分还贷。护理每小时另扣 15 元；现金允许为负，代表未覆盖的生活开支，不会自动变成新贷款。知识没有上限，其他评分限制为 0—100。
 
-| Key            | Type   | Owner                    |
-|----------------|--------|--------------------------|
-| `current_pose` | Pose   | NavToPose (read+write)   |
-| `target_pose`  | Pose   | UpdateTarget (write), NavToPose / IsGoalReached (read) |
+**这些参数是可修改的演示假设，不是现实收入估计或人生预测。** 第一版没有疾病概率、失业、就业门槛、家庭成员、死亡或通胀。健康、幸福、关系只是简化评分；模型结果主要用来讨论规则和取舍。
 
-### Port summary
+## 结构
 
-- **NavToPose**: `step_size` (default 1.0), `arrival_tolerance` (default 0.5),
-  `max_steps` (default 100)
-- **IsGoalReached**: `arrival_tolerance` (default 0.5)
-- **UpdateTarget**: `pose` (Pose, required)
-- **PrintMessage**: `msg` (string, required)
-
-## Multi-tree pattern
-
-`main.cpp` ticks each tree file in sequence, sharing one `BT::Blackboard`
-instance. This is the simplest way to compose larger behaviors:
-
-- Split a long plan into independent stages
-- Switch strategy at runtime (e.g. different maneuver per obstacle type)
-- Re-target and re-execute without rebuilding state from scratch
-
-## SubTree composition
-
-`trees/nav_subtree.xml` defines a single reusable `BehaviorTree ID="NavigateToPose"`:
-
-```xml
-<BehaviorTree ID="NavigateToPose">
-  <Sequence>
-    <NavToPose step_size="1.0" arrival_tolerance="0.3" max_steps="50"/>
-    <IsGoalReached arrival_tolerance="0.3"/>
-  </Sequence>
-</BehaviorTree>
+```text
+src/life.h                  状态、行为树节点、策略与时间推进
+src/main.cpp                命令行、摘要与每日 CSV
+tests/test_life.cpp         模拟规则测试
+.github/workflows/ci.yml     自动编译、测试、全年模拟
+examples/navigation/        保留的 BT.CPP 导航示例
 ```
 
-`trees/composite_tree.xml` pulls it in and invokes it twice with different
-goal bindings — once as a literal, once via blackboard pointer:
+测试覆盖：睡眠与健康优先级、每天时间守恒、现金守恒、状态范围、可复现性、最低活动频率、还贷和策略差异。CI 在每次 push / pull request 运行。
 
-```xml
-<root BTCPP_format="3" main_tree_to_execute="CompositeTree">
-  <include path="nav_subtree.xml"/>
+## 后续方向
 
-  <BehaviorTree ID="CompositeTree">
-    <Sequence>
-      <PrintMessage msg="leg 1 with static target"/>
-      <SubTree ID="NavigateToPose" target="10.0;5.0" __shared_blackboard="true"/>
+- 参数文件和小时级事件记录，方便复盘每次决策。
+- 多小时动作与 RUNNING / halt 生命周期。
+- 加入带固定随机种子的失业、疾病和学习机会。
+- 趋势可视化和可解释的行为树执行轨迹。
+- 再逐步扩展家庭、多 Agent 与社会环境。
 
-      <UpdateTarget pose="20.0;0.0"/>
-      <PrintMessage msg="leg 2 via blackboard"/>
-      <SubTree ID="NavigateToPose" target="{target_pose}" __shared_blackboard="true"/>
-    </Sequence>
-  </BehaviorTree>
-</root>
-```
+先保持单人、确定性、规则透明，不在第一版引入社会模拟的复杂度。
 
-Two port-binding modes (BT.CPP v3):
+## License
 
-| Form              | Meaning                                                  |
-|-------------------|----------------------------------------------------------|
-| `target="10;5"`   | Literal value — passed as-is to inner ports              |
-| `target="{key}"`  | Blackboard pointer — read from blackboard key `key`      |
-
-Important caveats:
-
-- **`<SubTree>` creates a separate blackboard by default.** To share state with
-  the parent (e.g. `current_pose`, `target_pose`), pass `__shared_blackboard="true"`.
-  Otherwise inner nodes can't see parent blackboard keys.
-- **Multiple `BehaviorTree`s in one file** need `main_tree_to_execute="..."` on
-  the `<root>` element to disambiguate.
-- For an alternative auto-remapping variant, see `<SubTreePlus __autoremap="true">`
-  (v3.8+).
-
-## Next steps (not yet implemented)
-
-- **Groot2** real-time visualization (`BT::PublisherZMQ`, requires `libzmq3-dev`)
-- **`.so` plugin loading** via `BT::BehaviorTreeFactory::registerFromPlugin` to
-  ship nodes as dynamically loaded shared libraries (the path `tutorial/baize_cpp/`
-  takes in this repo)
+MIT

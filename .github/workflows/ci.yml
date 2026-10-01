@@ -1,0 +1,11 @@
+name: C++ build and simulation
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build -j2
+      - run: ctest --test-dir build --output-on-failure
+      - run: ./build/life_tree --strategy all --days 365 --output output
