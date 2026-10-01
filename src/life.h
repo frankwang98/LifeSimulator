@@ -26,6 +26,85 @@ struct Behavior {
     branches.push_back({std::move(id), std::move(condition), std::move(action)});
   }
 };
+inline double utilityFor(const State& state, const Config& config, const std::string& action) {
+  const int clock = state.hour % 24;
+  const int adjustment = config.strategy == Strategy::Money    ? 2
+                         : config.strategy == Strategy::Health ? -2
+                                                               : 0;
+  const int work_limit = std::clamp(static_cast<int>(config.work_hours) + adjustment, 0, 12);
+  if (action == "work") {
+    if (!state.workday || clock < 9 || clock >= 21 || state.work_today >= work_limit) {
+      return -1;
+    }
+    return 35 + std::min(45.0, state.debt / 10000) + (config.strategy == Strategy::Money ? 35 : 0) +
+           state.energy * 0.12 + (state.economy_index - 1) * 30;
+  }
+  if (action == "exercise") {
+    return (100 - state.health) * 0.75 +
+           std::max(0.0, state.hour - state.last_exercise - config.exercise_interval) * 0.8 +
+           (config.strategy == Strategy::Health ? 30 : 0);
+  }
+  if (action == "family") {
+    if (!state.companion.enabled) {
+      return -1;
+    }
+    return ((100 - state.relationship) * 0.7 +
+            std::max(0.0, state.hour - state.last_family - config.family_interval) * 0.9 +
+            (state.companion.action == "connect" ? 18 : 0)) *
+           config.social_weight;
+  }
+  if (action == "study") {
+    return std::max(0.0, 65 - state.knowledge) * 0.45 +
+           std::max(0.0, state.hour - state.last_study - config.study_interval) * 0.7;
+  }
+  return (100 - state.happiness) * 0.45 + (100 - state.energy) * 0.38 + 12;
+}
+inline void updateUtilities(State& state, const Config& config) {
+  state.utilities.clear();
+  for (const char* action : {"work", "exercise", "family", "study", "leisure"}) {
+    state.utilities.push_back({action, utilityFor(state, config, action)});
+  }
+}
+inline std::string utilityChoice(const State& state) {
+  return std::max_element(state.utilities.begin(), state.utilities.end(),
+                          [](const UtilityScore& left, const UtilityScore& right) {
+                            return left.score < right.score;
+                          })
+      ->action;
+}
+inline void tickCompanion(State& state) {
+  auto& agent = state.companion;
+  if (!agent.enabled) {
+    agent.action = "away";
+    agent.utilities.clear();
+    return;
+  }
+  const int clock = state.hour % 24;
+  agent.utilities = {
+      {"sleep", clock >= 23 || clock < 7 ? 1000.0 : 100 - agent.energy},
+      {"work", state.workday && clock >= 9 && clock < 18 ? 70.0 : -1.0},
+      {"connect", (100 - state.relationship) * 0.8 + (clock >= 18 && clock < 23 ? 30 : 0)},
+      {"leisure", (100 - agent.happiness) * 0.45 + (100 - agent.energy) * 0.35 + 10}};
+  agent.action = std::max_element(agent.utilities.begin(), agent.utilities.end(),
+                                  [](const UtilityScore& left, const UtilityScore& right) {
+                                    return left.score < right.score;
+                                  })
+                     ->action;
+  if (agent.action == "sleep") {
+    agent.energy += 12;
+  } else if (agent.action == "work") {
+    agent.energy -= 6;
+    agent.happiness -= 0.15;
+  } else if (agent.action == "connect") {
+    agent.energy -= 1;
+    agent.happiness += 0.5;
+  } else {
+    agent.energy += 3;
+    agent.happiness += 0.25;
+  }
+  agent.energy = std::clamp(agent.energy, 0.0, 100.0);
+  agent.happiness = std::clamp(agent.happiness, 0.0, 100.0);
+}
 inline Behavior makeBehavior(const Config& config) {
   Behavior tree;
   const auto exercise = [](State& state) {
@@ -35,8 +114,15 @@ inline Behavior makeBehavior(const Config& config) {
     state.last_exercise = state.hour;
   };
   const auto family = [](State& state) {
-    state.relationship += 2;
-    state.happiness += 1;
+    const double together = state.companion.enabled && (state.companion.action == "connect" ||
+                                                        state.companion.action == "leisure")
+                                ? 1.0
+                                : 0.0;
+    state.relationship += 1.4 + together;
+    state.happiness += 0.8 + together * 0.4;
+    if (state.companion.enabled) {
+      state.companion.happiness += 0.5 + together * 0.5;
+    }
     state.energy -= 1;
     state.last_family = state.hour;
   };
@@ -66,30 +152,22 @@ inline Behavior makeBehavior(const Config& config) {
       [](const State& state) { return state.hour - state.last_exercise >= 48; }, exercise);
   tree.add(
       "family_floor", "至少每 48 小时陪伴一次", "family",
-      [](const State& state) { return state.hour - state.last_family >= 48; }, family);
+      [](const State& state) {
+        return state.companion.enabled && state.hour - state.last_family >= 48;
+      },
+      family);
   tree.add(
       "study_floor", "至少每 72 小时学习一次", "study",
       [](const State& state) { return state.hour - state.last_study >= 72; }, study);
-  if (config.strategy != Strategy::Money) {
-    tree.add(
-        "exercise", "到达设定的运动间隔", "exercise",
-        [interval = config.exercise_interval](const State& state) {
-          return state.hour - state.last_exercise >= interval;
-        },
-        exercise);
-  }
   const int adjustment = config.strategy == Strategy::Money    ? 2
                          : config.strategy == Strategy::Health ? -2
                                                                : 0;
   const int limit = std::clamp(static_cast<int>(config.work_hours) + adjustment, 0, 12);
   tree.add(
-      "work", "工作日 09:00–21:00，未超过每日 " + std::to_string(limit) + " 小时上限", "work",
-      [limit](const State& state) {
-        return state.workday && state.hour % 24 >= 9 && state.hour % 24 < 21 &&
-               state.work_today < limit;
-      },
+      "utility_work", "Utility AI 当前最高分：工作（每日上限 " + std::to_string(limit) + " 小时）",
+      "work", [](const State& state) { return utilityChoice(state) == "work"; },
       [income = config.hourly_income](State& state) {
-        const double wage = income * (1 + state.knowledge / 100);
+        const double wage = income * state.economy_index * (1 + state.knowledge / 100);
         state.cash += wage;
         state.income_today += wage;
         ++state.work_today;
@@ -97,22 +175,18 @@ inline Behavior makeBehavior(const Config& config) {
         state.health -= 0.12;
         state.happiness -= 0.2;
       });
-  if (config.strategy != Strategy::Money) {
-    tree.add(
-        "family", "到达设定的陪伴间隔", "family",
-        [interval = config.family_interval](const State& state) {
-          return state.hour - state.last_family >= interval;
-        },
-        family);
-    tree.add(
-        "study", "到达设定的学习间隔", "study",
-        [interval = config.study_interval](const State& state) {
-          return state.hour - state.last_study >= interval;
-        },
-        study);
-  }
   tree.add(
-      "leisure", "其他行为未被选中", "leisure", [](const State&) { return true; },
+      "utility_exercise", "Utility AI 当前最高分：运动", "exercise",
+      [](const State& state) { return utilityChoice(state) == "exercise"; }, exercise);
+  tree.add(
+      "utility_family", "Utility AI 当前最高分：陪伴", "family",
+      [](const State& state) { return utilityChoice(state) == "family"; }, family);
+  tree.add(
+      "utility_study", "Utility AI 当前最高分：学习", "study",
+      [](const State& state) { return utilityChoice(state) == "study"; }, study);
+  tree.add(
+      "utility_leisure", "Utility AI 当前最高分：休闲", "leisure",
+      [](const State& state) { return utilityChoice(state) == "leisure"; },
       [](State& state) {
         state.energy += 3;
         state.happiness += 0.2;
@@ -128,6 +202,8 @@ inline void clamp(State& state) {
   for (double* value : {&state.health, &state.energy, &state.happiness, &state.relationship}) {
     *value = std::clamp(*value, 0.0, 100.0);
   }
+  state.companion.happiness = std::clamp(state.companion.happiness, 0.0, 100.0);
+  state.companion.energy = std::clamp(state.companion.energy, 0.0, 100.0);
 }
 struct Hour {
   int hour;
@@ -151,11 +227,16 @@ inline const std::vector<std::string> actions = {"sleep", "recover", "exercise",
 inline std::vector<Day> simulate(const Config& config) {
   config.validate();
   State state = config.initial;
+  state.companion.enabled = config.companion_enabled == 1;
   auto behavior = makeBehavior(config);
   Date date = config.start;
   std::vector<Day> result;
   result.reserve(config.days);
   for (int day = 0; day < config.days; ++day) {
+    // A deterministic world signal: the user-selected baseline plus a gentle
+    // half-year economic cycle. It affects both the work decision and wages.
+    state.economy_index = std::clamp(
+        config.economy_index + 0.08 * std::sin(day * 2 * 3.14159265358979323846 / 180), 0.5, 1.5);
     state.work_today = 0;
     state.income_today = 0;
     state.workday = day >= config.vacation_days && weekday(date) != 0 && weekday(date) != 6;
@@ -164,6 +245,8 @@ inline std::vector<Day> simulate(const Config& config) {
     std::vector<Hour> hours;
     for (int hour = 0; hour < 24; ++hour) {
       state.trace.clear();
+      tickCompanion(state);
+      updateUtilities(state, config);
       State before = state;
       behavior.root->tick(state);
       ++counts.at(std::find(actions.begin(), actions.end(), state.action) - actions.begin());

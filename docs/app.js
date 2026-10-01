@@ -5,6 +5,7 @@ const day = $('#day');
 const hour = $('#hour');
 const actionKeys = ['sleep', 'recover', 'exercise', 'family', 'study', 'work', 'leisure'];
 const actionLabels = {sleep: '睡眠', recover: '休养', exercise: '运动', family: '陪伴', study: '学习', work: '工作', leisure: '休闲'};
+const companionLabels = {sleep: '睡眠', work: '工作', connect: '主动陪伴', leisure: '休闲', away: '未加入世界'};
 const scoreLabels = {health: '健康', energy: '精力', cash: '现金', debt: '负债', knowledge: '知识', happiness: '幸福', relationship: '关系'};
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const fmt = value => Number(value).toLocaleString('zh-CN', {maximumFractionDigits: 1});
@@ -22,6 +23,7 @@ function clearScene(message) {
   $('#scene').innerHTML = ''; $('#scene-title').textContent = '我的平行世界';
   $('#scene-message').textContent = message; $('#scene-reason').textContent = '';
   $('#tree').innerHTML = ''; $('#events').innerHTML = ''; $('#deltas').textContent = '';
+  $('#utility').innerHTML = ''; $('#agent-status').innerHTML = '';
   if (timeMode === 'live') { $('#stats').innerHTML = ''; $('#activities').innerHTML = ''; }
   $('#action-label').textContent = message; $('#root-status').textContent = 'Selector · 等待有效记录';
 }
@@ -146,11 +148,17 @@ function renderDay() {
 function renderTrace() {
   const tick = currentTick(); if (!tick) return;
   const activeBranches = timeMode === 'live' ? liveData.branches : branches;
-  LifeScene.render(tick.action, gender);
+  LifeScene.render(tick.action, gender, tick.after.companion);
   $('#scene-status').textContent = `${timeMode === 'live' ? '现在' : '模拟'} · ${actionLabels[tick.action]} · ${timeMode === 'live' ? (liveData.workday ? '工作日' : '休息日') : ''}`;
   currentClock();
   $('#hour-label').textContent = `${String(tick.hour).padStart(2, '0')}:00`;
   $('#action-label').textContent = `这一小时：${actionLabels[tick.action]} · C++ Action SUCCESS`;
+  const companion = tick.after.companion;
+  $('#agent-status').innerHTML = `<article><span>我</span><strong>${actionLabels[tick.action]}</strong><small>精力 ${fmt(tick.after.energy)} · 幸福 ${fmt(tick.after.happiness)}</small></article><article><span>伴侣 Agent</span><strong>${companionLabels[companion.action]}</strong><small>${companion.enabled ? `精力 ${fmt(companion.energy)} · 幸福 ${fmt(companion.happiness)}` : '可在世界设定中加入'}</small></article><article><span>环境</span><strong>经济指数 ${fmt(tick.before.economy_index)}</strong><small>影响工作效用与实际收入</small></article>`;
+  const usable = tick.utilities.filter(item => item.score >= 0);
+  const highest = Math.max(1, ...usable.map(item => item.score));
+  const companionHighest = Math.max(1, ...tick.companion_utilities.map(item => item.score));
+  $('#utility').innerHTML = `<h3>我的 Utility 分数</h3>${usable.map(item => `<div class="utility-row ${item.action === tick.action ? 'chosen' : ''}"><span>${actionLabels[item.action]}</span><div><i style="width:${Math.max(0, item.score) / highest * 100}%"></i></div><b>${fmt(item.score)}</b></div>`).join('')}<details><summary>伴侣 Agent 的 Utility 分数</summary>${tick.companion_utilities.filter(item => item.score >= 0).map(item => `<div class="utility-row ${item.action === companion.action ? 'chosen' : ''}"><span>${companionLabels[item.action]}</span><div><i style="width:${Math.max(0, item.score) / companionHighest * 100}%"></i></div><b>${fmt(item.score)}</b></div>`).join('')}</details>`;
   $('#deltas').textContent = Object.keys(scoreLabels).filter(key => Math.abs(tick.after[key] - tick.before[key]) > 0.000001).map(key => `${scoreLabels[key]} ${fmt(tick.before[key])} → ${fmt(tick.after[key])}`).join('；') || '状态没有变化';
   const eventMap = Object.fromEntries(tick.events.map(event => [event.node, event.status]));
   $('#root-status').textContent = `Selector · ${eventMap.root} · 选择第一个成功分支`;

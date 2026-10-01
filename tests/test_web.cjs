@@ -34,10 +34,16 @@ function equivalent(wasm, native, location = 'result') {
       equivalent(wasm, JSON.parse(native.stdout));
       assert.equal(wasm.engine, 'cpp-behavior-tree');
       assert.equal(wasm.hours.length, 24);
+      assert.equal(wasm.hours[0].utilities.length, 5);
+      assert.equal(wasm.hours[0].companion_utilities.length, 4);
+      assert.equal(wasm.hours[0].after.companion.enabled, true);
     }
     assert(simulate('health=nan').error);
     assert(simulate('days=0').error);
     assert(simulate('start_date=invalid').error);
+    const solo = simulate('days=1\ntrace_day=1\ncompanion_enabled=0');
+    assert.equal(solo.hours[0].after.companion.enabled, false);
+    assert.equal(solo.hours[0].companion_utilities.length, 0);
     // Exercise the exact worker script with the already-loaded real WASM engine.
     const messages = [];
     const context = {
@@ -59,7 +65,7 @@ function equivalent(wasm, native, location = 'result') {
     const live = messages.at(-1);
     assert.equal(live.type, 'live');
     assert.equal(live.date, '2026-10-01');
-    assert.equal(live.hours[20].action, 'leisure');
+    assert.equal(live.hours[20].action, 'family');
     assert(live.hours[20].before.cash >= live.hours[20].after.cash);
     context.self.onmessage({data: {id: 3, type: 'run', values: {days: '0', start_date: '2026-10-01'}}});
     assert.equal(messages.at(-1).type, 'error');

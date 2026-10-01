@@ -43,6 +43,9 @@ struct Config {
   double knowledge_gain = 0.12;
   double annual_interest = 0.04;
   double cash_reserve = 3000;
+  double companion_enabled = 1;
+  double social_weight = 1;
+  double economy_index = 1;
   void validate() const {
     auto range = [](double value, double low, double high, const char* key) {
       if (!std::isfinite(value) || value < low || value > high) {
@@ -71,6 +74,12 @@ struct Config {
     range(knowledge_gain, 0, 10, "knowledge_gain");
     range(annual_interest, 0, 1, "annual_interest");
     range(cash_reserve, 0, 1e8, "cash_reserve");
+    range(companion_enabled, 0, 1, "companion_enabled");
+    if (std::floor(companion_enabled) != companion_enabled) {
+      throw std::invalid_argument("companion_enabled must be 0 or 1");
+    }
+    range(social_weight, 0, 2, "social_weight");
+    range(economy_index, 0.5, 1.5, "economy_index");
     parseDate(dateString(start));
   }
 };
@@ -93,7 +102,10 @@ inline Config parseConfig(const std::string& text) {
                                            {"study_interval", &config.study_interval},
                                            {"knowledge_gain", &config.knowledge_gain},
                                            {"annual_interest", &config.annual_interest},
-                                           {"cash_reserve", &config.cash_reserve}};
+                                           {"cash_reserve", &config.cash_reserve},
+                                           {"companion_enabled", &config.companion_enabled},
+                                           {"social_weight", &config.social_weight},
+                                           {"economy_index", &config.economy_index}};
   std::istringstream input(text);
   std::string line;
   while (std::getline(input, line)) {

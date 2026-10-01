@@ -6,6 +6,17 @@
 namespace life {
 enum class Status { Success, Failure };
 enum class Strategy { Money, Health, Balanced };
+struct UtilityScore {
+  std::string action;
+  double score;
+};
+struct Companion {
+  bool enabled = true;
+  double energy = 75;
+  double happiness = 65;
+  std::string action = "leisure";
+  std::vector<UtilityScore> utilities;
+};
 struct TraceEvent {
   std::string node;
   std::string kind;
@@ -19,6 +30,8 @@ struct State {
   double knowledge = 20;
   double happiness = 60;
   double relationship = 60;
+  double economy_index = 1;
+  Companion companion;
   double initial_age = 28;
   int hour = 0;
   int work_today = 0;
@@ -30,6 +43,7 @@ struct State {
   double income_today = 0;
   std::string action;
   std::vector<TraceEvent> trace;
+  std::vector<UtilityScore> utilities;
   double age() const {
     return initial_age + hour / (24.0 * 365.2425);
   }

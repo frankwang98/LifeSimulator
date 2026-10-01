@@ -88,12 +88,31 @@ int main() {
     auto higher_income = life::simulate(config);
     check(higher_income.back().state.debt < month.back().state.debt,
           "parameters change the future");
+    config.hourly_income = 50;
+    config.economy_index = 1.5;
+    auto strong_economy = life::simulate(config);
+    check(strong_economy.back().state.debt < month.back().state.debt,
+          "economic environment changes wages and the future");
     config.work_hours = 0;
     auto no_work = life::simulate(config);
     for (const auto& day : no_work)
       check(day.counts[5] == 0, "zero working hours");
-    for (const std::string invalid :
-         {"health=nan", "days=1.5", "debt=-1", "start_date=2026-02-30", "unknown=1"}) {
+    config = life::parseConfig("days=30\ntrace_day=1\ncompanion_enabled=1\nsocial_weight=1.5");
+    auto social = life::simulate(config);
+    check(social.front().hours.front().before.utilities.size() == 5,
+          "main agent exposes utility scores");
+    check(social.front().hours.front().before.companion.utilities.size() == 4,
+          "companion agent exposes utility scores");
+    check(social.back().state.companion.enabled, "companion remains in the world");
+    config.companion_enabled = 0;
+    auto solo = life::simulate(config);
+    check(!solo.back().state.companion.enabled &&
+              solo.front().hours.front().before.companion.utilities.empty(),
+          "companion can be removed from the world");
+    for (const auto& day : solo)
+      check(day.counts[3] == 0, "solo world does not select companion time");
+    for (const std::string invalid : {"health=nan", "days=1.5", "debt=-1", "companion_enabled=0.5",
+                                      "economy_index=2", "start_date=2026-02-30", "unknown=1"}) {
       bool invalid_rejected = false;
       try {
         life::parseConfig(invalid);

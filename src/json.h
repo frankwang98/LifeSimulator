@@ -41,7 +41,24 @@ inline void stateJson(std::ostream& output, const State& state) {
          << ",\"energy\":" << state.energy << ",\"cash\":" << state.cash
          << ",\"debt\":" << state.debt << ",\"knowledge\":" << state.knowledge
          << ",\"happiness\":" << state.happiness << ",\"relationship\":" << state.relationship
-         << '}';
+         << ",\"economy_index\":" << state.economy_index
+         << ",\"companion\":{\"enabled\":" << (state.companion.enabled ? "true" : "false")
+         << ",\"energy\":" << state.companion.energy
+         << ",\"happiness\":" << state.companion.happiness << ",\"action\":";
+  quote(output, state.companion.action);
+  output << "}}";
+}
+inline void utilitiesJson(std::ostream& output, const std::vector<UtilityScore>& utilities) {
+  output << '[';
+  for (size_t index = 0; index < utilities.size(); ++index) {
+    if (index) {
+      output << ',';
+    }
+    output << "{\"action\":";
+    quote(output, utilities[index].action);
+    output << ",\"score\":" << utilities[index].score << '}';
+  }
+  output << ']';
 }
 inline std::string simulationJson(const Config& config) {
   const auto days = simulate(config);
@@ -98,6 +115,10 @@ inline std::string simulationJson(const Config& config) {
     stateJson(output, hour.before);
     output << ",\"after\":";
     stateJson(output, hour.after);
+    output << ",\"utilities\":";
+    utilitiesJson(output, hour.before.utilities);
+    output << ",\"companion_utilities\":";
+    utilitiesJson(output, hour.before.companion.utilities);
     output << ",\"events\":[";
     for (size_t event = 0; event < hour.events.size(); ++event) {
       if (event)
