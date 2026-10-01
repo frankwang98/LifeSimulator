@@ -55,6 +55,12 @@ function equivalent(wasm, native, location = 'result') {
     context.self.onmessage({data: {id: 2, type: 'trace', values: {days: '30', trace_day: '8'}}});
     assert.equal(messages.at(-1).type, 'trace');
     assert.equal(messages.at(-1).hours.length, 24);
+    context.self.onmessage({data: {id: 4, type: 'live', values: {days: '1', trace_day: '1'}}});
+    const live = messages.at(-1);
+    assert.equal(live.type, 'live');
+    assert.equal(live.date, '2026-10-01');
+    assert.equal(live.hours[20].action, 'leisure');
+    assert(live.hours[20].before.cash >= live.hours[20].after.cash);
     context.self.onmessage({data: {id: 3, type: 'run', values: {days: '0', start_date: '2026-10-01'}}});
     assert.equal(messages.at(-1).type, 'error');
     console.log('Native C++ and browser WASM results and execution traces match; invalid inputs rejected.');

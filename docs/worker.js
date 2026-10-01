@@ -26,6 +26,10 @@ self.onmessage = event => {
       const baseline = simulate({days: values.days, start_date: values.start_date, trace_day: 1});
       const world = simulate({...values, trace_day: 1});
       self.postMessage({id, type: 'result', baseline, world});
+    } else if (type === 'live') {
+      const world = simulate(values);
+      const row = world.days.at(-1);
+      self.postMessage({id, type: 'live', day: row.day, date: row.date, weekday: row.weekday, workday: row.workday, hours: world.hours, branches: world.branches});
     } else if (type === 'trace') {
       const world = simulate(values);
       self.postMessage({id, type: 'trace', day: Number(values.trace_day), hours: world.hours, branches: world.branches});

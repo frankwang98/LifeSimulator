@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: node tests/test_time.cjs
       - run: sudo apt-get update && sudo apt-get install -y clang-format-18
       - run: clang-format-18 --dry-run --Werror src/*.h src/*.cpp tests/*.cpp examples/navigation/src/*.h examples/navigation/src/*.cpp
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

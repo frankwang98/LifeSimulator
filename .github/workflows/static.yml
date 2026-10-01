@@ -24,6 +24,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y emscripten
       - run: bash scripts/build_web.sh
       - run: node tests/test_web.cjs
+      - run: node tests/test_scene_ui.cjs
       - uses: actions/configure-pages@v5
         with:
           enablement: true
